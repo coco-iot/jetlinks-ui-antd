@@ -36,7 +36,7 @@ interface State {
 const Save: React.FC<Props> = props => {
   const version = localStorage.getItem('system-version');
   const initState: State = {
-    dataType: props.data.type?.value,
+    dataType: props.data.type,
     supportsType: [],
     certificateList: [],
     tcpServerParseType: props.data?.configuration?.parserType || 'DIRECT',
@@ -251,12 +251,14 @@ const Save: React.FC<Props> = props => {
               </Form.Item>
               <Form.Item label="HOST">
                 {getFieldDecorator('configuration.host', {
+                  rules:[{required:true,message:'HOST必填'}],
                   initialValue: props.data?.configuration?.host || '0.0.0.0',
                 })(<Input />)}
               </Form.Item>
               <Form.Item label="PORT">
                 {getFieldDecorator('configuration.port', {
-                  initialValue: props.data?.configuration?.port,
+                  rules:[{required:true,message:'PORT必填'}],
+                  initialValue: props.data?.configuration?.port||'1883',
                 })(<Input />)}
               </Form.Item>
               <Form.Item label="TLS">
@@ -294,17 +296,20 @@ const Save: React.FC<Props> = props => {
             <div>
               <Form.Item label="clientId">
                 {getFieldDecorator('configuration.clientId', {
+                  rules:[{required:true,message:'ClientId必填'}],
                   initialValue: props.data?.configuration?.clientId,
                 })(<Input />)}
               </Form.Item>
               <Form.Item label="HOST">
                 {getFieldDecorator('configuration.host', {
-                  initialValue: props.data?.configuration?.host || '0.0.0.0',
+                  rules:[{required:true,message:'HOST必填'}],
+                  initialValue: props.data?.configuration?.host || '127.0.0.1',
                 })(<Input />)}
               </Form.Item>
               <Form.Item label="PORT">
                 {getFieldDecorator('configuration.port', {
-                  initialValue: props.data?.configuration?.port,
+                  rules:[{required:true,message:'PORT必填'}],
+                  initialValue: props.data?.configuration?.port||'1883',
                 })(<Input />)}
               </Form.Item>
               <Form.Item label="TLS">
@@ -393,6 +398,7 @@ const Save: React.FC<Props> = props => {
                 </span>
               }>
                 {getFieldDecorator('configuration.parserType', {
+                  rules: [{ required: true, message: '请选择' }],
                   initialValue: props.data?.configuration?.parserType,
                 })(
                   <Select
@@ -456,6 +462,7 @@ const Save: React.FC<Props> = props => {
                 </span>
               }>
                 {getFieldDecorator('configuration.parserType', {
+                  rules: [{ required: true, message: '请选择' }],
                   initialValue: props.data?.configuration?.parserType,
                 })(
                   <Select
@@ -953,6 +960,7 @@ const Save: React.FC<Props> = props => {
                 </span>
               }>
                 {getFieldDecorator(`cluster[${index}].configuration.parserType`, {
+                  rules: [{ required: true, message: '请选择' }],
                   initialValue: props.data?.cluster ? props.data?.cluster[index]?.configuration?.parserType : '',
                 })(
                   <Select
@@ -1016,6 +1024,7 @@ const Save: React.FC<Props> = props => {
                 </span>
               }>
                 {getFieldDecorator(`cluster[${index}].configuration.parserType`, {
+                  rules: [{ required: true, message: '请选择' }],
                   initialValue: props.data?.cluster ? props.data?.cluster[index]?.configuration?.parserType : '',
                 })(
                   <Select
@@ -1421,7 +1430,7 @@ const Save: React.FC<Props> = props => {
         <Form.Item label="组件类型">
           {getFieldDecorator('type', {
             rules: [{ required: true, message: '请选择组件类型' }],
-            initialValue: props.data?.type?.value,
+            initialValue: props.data?.type,
           })(
             <Select disabled={!!props.data.id}
               onChange={(value: string) => {

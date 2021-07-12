@@ -1,16 +1,16 @@
-import React, {useState} from 'react';
-import {Button, Card, message, Spin, Tabs} from 'antd';
+import React, { useState } from 'react';
+import { Button, Card, Icon, message, Popconfirm, Spin, Tabs, Tooltip } from 'antd';
 import Property from './definition/Properties';
 import Functions from './definition/Functions';
 import Events from './definition/Events';
 import Tags from './definition/Tags';
 import Form from "antd/es/form";
-import {FormComponentProps} from "antd/lib/form";
-import MetaData from "@/pages/device/product/save/model/metaData";
-import QuickImport from "@/pages/device/product/save/model/quickImport";
+import { FormComponentProps } from "antd/lib/form";
+import MetaData from "@/pages/device/instance/editor/detail/model/metaData";
+import QuickImport from "@/pages/device/instance/editor/detail/model/quickImport";
 import apis from "@/services";
 // import {DeviceProduct} from "@/pages/device/product/data";
-import {ProductContext} from '@/pages/device/product/context';
+import { ProductContext } from '@/pages/device/product/context';
 
 interface Props extends FormComponentProps {
   basicInfo: any;
@@ -23,6 +23,7 @@ interface Props extends FormComponentProps {
   functionsData: any;
   eventsData: any;
   tagsData: any;
+  reset: Function;
   update: Function;
 }
 
@@ -50,8 +51,10 @@ const Definition: React.FC<Props> = props => {
   });
 
   const updateModel = (item?: any) => {
-    apis.deviceProdcut
-      .update(item, basicInfo.id)
+    const params = { ...basicInfo };
+    // params.metadata = item.metadata;
+    apis.deviceInstance
+      .saveOrUpdateMetadata(params.id, item.metadata)
       .then((response: any) => {
         if (response.status === 200) {
           basicInfo.metadata = item.metadata;
@@ -73,13 +76,36 @@ const Definition: React.FC<Props> = props => {
 
   const operations = (
     <>
-      <Button onClick={() => {
+      <Popconfirm title="重置后将使用产品的物模型配置"
+        onConfirm={() => {
+          setSpinning(true);
+          apis.deviceInstance.reset(basicInfo.id).then((res) => {
+            if (res.status === 200) {
+              apis.deviceInstance.info(basicInfo.id)
+                .then((response: any) => {
+                  let data = JSON.parse(response.result.metadata);
+                  setSpinning(false);
+                  setImportData({
+                    properties: data.properties,
+                    functions: data.functions,
+                    events: data.events,
+                    tags: data.tags
+                  });
+                })
+              }
+              message.success('重置成功！');
+          }).catch(() => {
+        }).finally(() => props.update());
+        }}>
+        <Button>重置</Button>
+      </Popconfirm>
+      <Button style={{ marginLeft: 10 }} onClick={() => {
         setQuickImportVisible(true);
       }}>
         快速导入
       </Button>
       {props.basicInfo.metadata && (
-        <Button style={{marginLeft: 10}} onClick={() => {
+        <Button style={{ marginLeft: 10 }} onClick={() => {
           setMetaDataVisible(true);
         }}>
           物模型 TSL
@@ -131,13 +157,12 @@ const Definition: React.FC<Props> = props => {
                 />
               </Tabs.TabPane>
             </Tabs>
-
           </ProductContext.Provider>
         </TenantContext.Provider>
         {metaDataVisible && (
           <MetaData close={() => {
             setMetaDataVisible(false);
-          }} productId={basicInfo.id}/>
+          }} deviceId={basicInfo.id} />
         )}
         {quickImportVisible && (
           <QuickImport
@@ -147,7 +172,7 @@ const Definition: React.FC<Props> = props => {
             update={(item: any) => {
               setQuickImportVisible(false);
               setSpinning(true);
-              updateModel({metadata: item});
+              updateModel({ metadata: item });
             }}
           />
         )}

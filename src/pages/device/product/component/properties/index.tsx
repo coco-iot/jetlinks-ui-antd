@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Form, Input, Select, Radio, Col, Drawer, Button, Row, Icon, List, AutoComplete, InputNumber, Collapse, Spin, Dropdown, Menu, } from 'antd';
+import { Form, Input, Select, Radio, Col, Drawer, Button, Row, Icon, List, AutoComplete, InputNumber, Collapse, Spin, Dropdown, Menu, Checkbox, } from 'antd';
 import { FormComponentProps } from 'antd/lib/form';
 import { renderUnit } from '@/pages/device/public';
 import { PropertiesMeta } from '../data.d';
 import Paramter from '../paramter';
 import apis from '@/services';
 import { ProductContext } from '../../context';
+import VirtualEditorComponent from '../virtual-editor';
+import { format } from 'prettier';
 
 interface Props extends FormComponentProps {
   data: Partial<PropertiesMeta>;
+  dataList: Partial<PropertiesMeta>[];
   unitsData: any;
   save: Function;
   close: Function;
@@ -26,9 +29,16 @@ interface State {
   properties: any[];
   arrayProperties: any[];
   aType: string;
+
+  isVirtual: boolean;
+  aggTypeList: any[];
+  isUseWindow: boolean;
+  isTimeWindow: boolean;
+  windows: string[];
 }
 
 const PropertiesDefin: React.FC<Props> = props => {
+  const version = localStorage.getItem('system-version');
   const initState: State = {
     dataType: props.data.valueType?.type || '',
     aType: props.data.valueType?.elementType?.type || '',
@@ -41,6 +51,12 @@ const PropertiesDefin: React.FC<Props> = props => {
     arrayProperties: props.data.valueType?.elementType?.properties || [],
     currentParameter: {},
     parameters: [],
+
+    isVirtual: props.data.expands?.virtual || props.data.expands?.virtual === 'true' ? true : false,
+    aggTypeList: [],
+    isUseWindow: props.data.expands?.virtualRule?.type === 'window' ? true : false,
+    isTimeWindow: props.data.expands?.virtualRule?.windowType === 'time' ? true : false,
+    windows: []
   };
 
   const {
@@ -58,26 +74,51 @@ const PropertiesDefin: React.FC<Props> = props => {
   const [configMetadata, setConfigMetadata] = useState<any[]>([]);
   const [loadConfig, setLoadConfig] = useState<boolean>(false);
   const [aType, setAType] = useState<string>(initState.aType);
+
+  const [isVirtual, setIsVirtual] = useState(initState.data.expands?.source === 'rule' ? true : false);
+  const [aggTypeList, setAggTypeList] = useState(initState.aggTypeList);
+  const [isUseWindow, setIsUseWindow] = useState(initState.isUseWindow);
+  const [isTimeWindow, setIsTimeWindow] = useState(initState.isTimeWindow);
+  const [windows, setWindows] = useState(initState.windows);
+  const [script, setScript] = useState(props.data.expands?.virtualRule?.script || '');
+
   useEffect(() => {
     if (dataType === 'enum') {
       const elements = props.data.valueType?.elements || [];
       setEnumData(elements);
     }
     getMetadata();
+    getAggTypeList();
+    if (isUseWindow && isTimeWindow) {
+      setWindows(['useWindow', 'timeWindow'])
+    } else if (isUseWindow && !isTimeWindow) {
+      setWindows(['useWindow'])
+    } else if (!isUseWindow && isTimeWindow) {
+      setWindows(['timeWindow'])
+    } else {
+      setWindows([]);
+    }
   }, []);
 
   const dataTypeChange = (value: string) => {
     setDataType(value);
   };
 
-  const getFormData = (onlySave:boolean) => {
+  const getAggTypeList = () => {
+    apis.deviceProdcut.getAggTypeList().then(res => {
+      if (res.status === 200) {
+        setAggTypeList(res.result);
+      }
+    })
+  }
+
+  const getFormData = (onlySave: boolean) => {
     const {
-      form,
-      // data,
+      form
     } = props;
     form.validateFields((err: any, fieldValue: any) => {
       if (err) return;
-      const data = fieldValue;
+      let data = fieldValue;
       if (dataType === 'enum') {
         data.valueType.elements = enumData;
       }
@@ -86,6 +127,16 @@ const PropertiesDefin: React.FC<Props> = props => {
       }
       if (dataType === 'array' && data.valueType.elementType.type === 'object') {
         data.valueType.elementType.properties = arrayProperties;
+      }
+      if (version === 'pro' && isVirtual) {
+        data.expands.virtualRule.type = isUseWindow ? 'window' : 'script';
+        if (isUseWindow) {
+          data.expands.virtualRule.windowType = isTimeWindow ? 'time' : 'num';
+          data.windows = undefined;
+          data.expands.virtualRule.script = script;
+        }else{
+          data.expands.virtualRule.script = script;
+        }
       }
       props.save({ ...data }, onlySave);
     });
@@ -230,38 +281,38 @@ const PropertiesDefin: React.FC<Props> = props => {
                           }}
                         />
                       ) : (
-                          <Icon type="minus-circle"
+                        <Icon type="minus-circle"
+                          onClick={() => {
+                            arrayEnumData.splice(index, 1);
+                            setArrayEnumData([...arrayEnumData]);
+                          }}
+                        />
+                      )
+                    ) : (
+                      index === (arrayEnumData.length - 1) ? (
+                        <Row>
+                          <Icon type="plus-circle"
+                            onClick={() => {
+                              setArrayEnumData([...arrayEnumData, { id: arrayEnumData.length + 1 }]);
+                            }}
+                          />
+                          <Icon style={{ paddingLeft: 10 }}
+                            type="minus-circle"
                             onClick={() => {
                               arrayEnumData.splice(index, 1);
                               setArrayEnumData([...arrayEnumData]);
                             }}
                           />
-                        )
-                    ) : (
-                        index === (arrayEnumData.length - 1) ? (
-                          <Row>
-                            <Icon type="plus-circle"
-                              onClick={() => {
-                                setArrayEnumData([...arrayEnumData, { id: arrayEnumData.length + 1 }]);
-                              }}
-                            />
-                            <Icon style={{ paddingLeft: 10 }}
-                              type="minus-circle"
-                              onClick={() => {
-                                arrayEnumData.splice(index, 1);
-                                setArrayEnumData([...arrayEnumData]);
-                              }}
-                            />
-                          </Row>
-                        ) : (
-                            <Icon type="minus-circle"
-                              onClick={() => {
-                                arrayEnumData.splice(index, 1);
-                                setArrayEnumData([...arrayEnumData]);
-                              }}
-                            />
-                          )
-                      )}
+                        </Row>
+                      ) : (
+                        <Icon type="minus-circle"
+                          onClick={() => {
+                            arrayEnumData.splice(index, 1);
+                            setArrayEnumData([...arrayEnumData]);
+                          }}
+                        />
+                      )
+                    )}
                   </Col>
                 </Row>
               ))}
@@ -335,7 +386,7 @@ const PropertiesDefin: React.FC<Props> = props => {
           <div>
             <Form.Item label="密码长度">
               {getFieldDecorator('valueType.elementType.expands.maxLength', {
-                initialValue: initState.data.valueType?.elementType.expands.maxLength,
+                initialValue: initState.data.valueType?.elementType?.expands?.maxLength,
               })(<Input addonAfter="字节" />)}
             </Form.Item>
           </div>
@@ -562,38 +613,38 @@ const PropertiesDefin: React.FC<Props> = props => {
                           }}
                         />
                       ) : (
-                          <Icon type="minus-circle"
+                        <Icon type="minus-circle"
+                          onClick={() => {
+                            enumData.splice(index, 1);
+                            setEnumData([...enumData]);
+                          }}
+                        />
+                      )
+                    ) : (
+                      index === (enumData.length - 1) ? (
+                        <Row>
+                          <Icon type="plus-circle"
+                            onClick={() => {
+                              setEnumData([...enumData, { id: enumData.length + 1 }]);
+                            }}
+                          />
+                          <Icon style={{ paddingLeft: 10 }}
+                            type="minus-circle"
                             onClick={() => {
                               enumData.splice(index, 1);
                               setEnumData([...enumData]);
                             }}
                           />
-                        )
-                    ) : (
-                        index === (enumData.length - 1) ? (
-                          <Row>
-                            <Icon type="plus-circle"
-                              onClick={() => {
-                                setEnumData([...enumData, { id: enumData.length + 1 }]);
-                              }}
-                            />
-                            <Icon style={{ paddingLeft: 10 }}
-                              type="minus-circle"
-                              onClick={() => {
-                                enumData.splice(index, 1);
-                                setEnumData([...enumData]);
-                              }}
-                            />
-                          </Row>
-                        ) : (
-                            <Icon type="minus-circle"
-                              onClick={() => {
-                                enumData.splice(index, 1);
-                                setEnumData([...enumData]);
-                              }}
-                            />
-                          )
-                      )}
+                        </Row>
+                      ) : (
+                        <Icon type="minus-circle"
+                          onClick={() => {
+                            enumData.splice(index, 1);
+                            setEnumData([...enumData]);
+                          }}
+                        />
+                      )
+                    )}
                   </Col>
                 </Row>
               ))}
@@ -667,7 +718,7 @@ const PropertiesDefin: React.FC<Props> = props => {
           <div>
             <Form.Item label="密码长度">
               {getFieldDecorator('valueType.expands.maxLength', {
-                initialValue: initState.data.valueType?.expands.maxLength,
+                initialValue: initState.data.valueType?.expands?.maxLength,
               })(<Input addonAfter="字节" />)}
             </Form.Item>
           </div>
@@ -710,8 +761,8 @@ const PropertiesDefin: React.FC<Props> = props => {
       case 'enum':
         return (
           <Select>
-            {config.type.elements.map(i => (
-              <Select.Option value={i.value}>{i.text}</Select.Option>
+            {config.type.elements.map((i: any) => (
+              <Select.Option value={i.value} key={i.value}>{i.text}</Select.Option>
             ))}
           </Select>
         );
@@ -759,7 +810,7 @@ const PropertiesDefin: React.FC<Props> = props => {
   return (
     <div>
       <Drawer
-        title="编辑属性"
+        title={!initState.data.id ? `添加属性` : `编辑属性`}
         placement="right"
         closable={false}
         onClose={() => props.close()}
@@ -829,11 +880,10 @@ const PropertiesDefin: React.FC<Props> = props => {
             </Form.Item>
             {renderDataType()}
 
-
             <Form.Item label="是否只读">
               {getFieldDecorator('expands.readOnly', {
                 rules: [{ required: true }],
-                initialValue: initState.data.expands?.readOnly.toString(),
+                initialValue: initState.data.expands?.readOnly?.toString?.(),
               })(
                 <Radio.Group>
                   <Radio value="true">是</Radio>
@@ -841,6 +891,120 @@ const PropertiesDefin: React.FC<Props> = props => {
                 </Radio.Group>,
               )}
             </Form.Item>
+
+            {/* 属性来源 */}
+            <Form.Item label="属性来源">
+              {getFieldDecorator('expands.source', {
+                rules: [{ required: true, message: '请选择' }],
+                initialValue: initState.data.expands?.source,
+              })(
+                <Select
+                  placeholder="请选择"
+                  onChange={(value: string) => {
+                    if(value === 'rule'){
+                      setIsVirtual(true);
+                    }else{
+                      setIsVirtual(false);
+                    }
+                  }}
+                >
+                  <Select.Option value="device">设备</Select.Option>
+                  <Select.Option value="manual">手动</Select.Option>
+                  <Select.Option value="rule">规则</Select.Option>
+                </Select>
+              )}
+            </Form.Item>
+            {/* 虚拟属性 */}
+            {version === 'pro' && (
+              <>
+                {/* <Form.Item label="虚拟属性">
+                  {getFieldDecorator('expands.virtual', {
+                    rules: [{ required: true }],
+                    initialValue: isVirtual,
+                  })(
+                    <Radio.Group onChange={(e) => {
+                      let value = e.target.value;
+                      setIsVirtual(value)
+                    }}>
+                      <Radio value={true}>是</Radio>
+                      <Radio value={false}>否</Radio>
+                    </Radio.Group>,
+                  )}
+                </Form.Item> */}
+                {isVirtual && (
+                  <>
+                    <Form.Item wrapperCol={{ span: 24 }}>
+                      {getFieldDecorator('expands.virtualRule.script', {
+                        // rules: [{ required: true }],
+                        initialValue: initState.data.expands?.virtualRule?.script
+                      })(
+                        <VirtualEditorComponent scriptValue={(value: string) => {
+                          setScript(value);
+                        }} metaDataList={props.dataList} data={props.data} formData={getFieldsValue()} />
+                      )}
+                    </Form.Item>
+                    <Form.Item label="">
+                      {getFieldDecorator('windows', {
+                        initialValue: windows,
+                      })(
+                        <Checkbox.Group onChange={(value) => {
+                          setIsUseWindow(value.includes('useWindow'));
+                          setIsTimeWindow(value.includes('timeWindow'));
+                        }}>
+                          <Row gutter={24}>
+                            <Col span={isUseWindow ? 12 : 24}>
+                              <Checkbox value="useWindow" style={{ lineHeight: '32px' }}>使用窗口</Checkbox>
+                            </Col>
+                            <Col span={12}>
+                              {isUseWindow && <Checkbox value="timeWindow" style={{ lineHeight: '32px' }}>时间窗口</Checkbox>}
+                            </Col>
+                          </Row>
+                        </Checkbox.Group>
+                      )}
+                    </Form.Item>
+                    {isUseWindow && (
+                      <>
+                        <Form.Item label="聚合函数">
+                          {getFieldDecorator('expands.virtualRule.aggType', {
+                            rules: [{ required: true }],
+                            initialValue: initState.data.expands?.virtualRule?.aggType
+                          })(
+                            <Select>
+                              {aggTypeList.map((item: any, index: number) => (
+                                <Select.Option value={item.value} key={index}>{`${item.value}(${item.text})`}</Select.Option>
+                              ))}
+                            </Select>
+                          )}
+                        </Form.Item>
+                        <Row>
+                          <Col span={10}>
+                            <Form.Item label={`窗口长度（${isTimeWindow ? '秒' : '次'}）`}>
+                              {getFieldDecorator('expands.virtualRule.window.span', {
+                                rules: [
+                                  { required: true }
+                                ],
+                                initialValue: initState.data.expands?.virtualRule?.window?.span,
+                              })(<Input placeholder="请输入" />)}
+                            </Form.Item>
+                          </Col>
+                          <Col span={4}></Col>
+                          <Col span={10}>
+                            <Form.Item label={`步长(${isTimeWindow ? '秒' : '次'}）`}>
+                              {getFieldDecorator('expands.virtualRule.window.every', {
+                                // rules: [
+                                //   // { required: true }
+                                // ],
+                                initialValue: initState.data.expands?.virtualRule?.window?.every,
+                              })(<Input placeholder="请输入" />)}
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
+            )}
             {!loadConfig && renderConfigMetadata()}
             <Form.Item label="描述">
               {getFieldDecorator('description', {

@@ -5,6 +5,7 @@ import { FormComponentProps } from 'antd/es/form';
 import moment, { Moment } from 'moment';
 import apis from '@/services';
 import encodeQueryParam from '@/utils/encodeParam';
+import Service from '../service';
 
 interface Props extends FormComponentProps {
   deviceId: string;
@@ -25,6 +26,7 @@ const Log: React.FC<Props> = props => {
   const [params, setParams] = useState({ deviceId: props.deviceId });
   const [log, setLog] = useState(initState.log);
 
+  const [logType, setLogType] = useState<any[]>([]);
   const loadLogData = (param: any) => {
     apis.deviceInstance
       .logs(props.deviceId, encodeQueryParam(param))
@@ -33,17 +35,22 @@ const Log: React.FC<Props> = props => {
           setLog(response.result);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   };
+
+  const service = new Service();
 
   useEffect(() => {
     loadLogData({
       pageIndex: 0,
       pageSize: 10,
       sorts: {
-        field: 'createTime',
+        field: 'timestamp',
         order: 'desc',
       },
+    });
+    service.getLogType().subscribe((data) => {
+      setLogType(data.result.map((item: { value: string, text: string }) => ({ id: item.value, name: item.text })));
     });
   }, []);
 
@@ -100,11 +107,11 @@ const Log: React.FC<Props> = props => {
   const onSearch = () => {
     // eslint-disable-next-line no-shadow
     const params = form.getFieldsValue();
-    if (params.createTime$BTW) {
-      const formatDate = params.createTime$BTW.map((e: Moment) =>
+    if (params.timestamp$BTW) {
+      const formatDate = params.timestamp$BTW.map((e: Moment) =>
         moment(e).format('YYYY-MM-DD HH:mm:ss'),
       );
-      params.createTime$BTW = formatDate.join(',');
+      params.timestamp$BTW = formatDate.join(',');
     }
     if (params.type$IN) {
       params.type$IN = params.type$IN.join(',');
@@ -116,7 +123,7 @@ const Log: React.FC<Props> = props => {
       pageIndex: 0,
       terms: { ...params, deviceId: props.deviceId },
       sorts: {
-        field: 'createTime',
+        field: 'timestamp',
         order: 'desc',
       },
     });
@@ -131,19 +138,18 @@ const Log: React.FC<Props> = props => {
         deviceId: props.deviceId,
       },
       sorts: {
-        field: 'createTime',
+        field: 'timestamp',
         order: 'desc',
       },
     });
   };
-
   const onTableChange = (pagination: PaginationConfig) => {
     loadLogData({
       pageIndex: Number(pagination.current) - 1,
       pageSize: pagination.pageSize,
       terms: params,
       sorts: {
-        field: 'createTime',
+        field: 'timestamp',
         order: 'desc',
       },
     });
@@ -159,17 +165,7 @@ const Log: React.FC<Props> = props => {
                 <Form.Item label="日志类型">
                   {getFieldDecorator('type$IN')(
                     <Select mode="multiple">
-                      {[
-                        { id: 'event', name: '事件上报' },
-                        { id: 'readProperty', name: '属性读取' },
-                        { id: 'writeProperty', name: '属性修改' },
-                        { id: 'reportProperty', name: '属性上报' },
-                        { id: 'call', name: '调用' },
-                        { id: 'reply', name: '回复' },
-                        { id: 'offline', name: '下线' },
-                        { id: 'online', name: '上线' },
-                        { id: 'other', name: '其它' },
-                      ].map(item => (
+                      {logType.map(item => (
                         <Select.Option key={item.id} value={item.id}>
                           {item.name}
                         </Select.Option>
@@ -180,7 +176,7 @@ const Log: React.FC<Props> = props => {
               </Col>
               <Col md={10} sm={24}>
                 <Form.Item label="日期">
-                  {getFieldDecorator('createTime$BTW')(
+                  {getFieldDecorator('timestamp$BTW')(
                     <DatePicker.RangePicker
                       showTime={{ format: 'HH:mm' }}
                       format="YYYY-MM-DD HH:mm"

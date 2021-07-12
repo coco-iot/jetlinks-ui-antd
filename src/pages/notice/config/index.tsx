@@ -15,6 +15,7 @@ import TagSelect from '../components/tag-select';
 import styles from '../index.less';
 import Debug from './debugger';
 import Logger from './log';
+import { getAccessToken } from '@/utils/authority';
 
 interface Props extends FormComponentProps {
   dispatch: Dispatch;
@@ -143,8 +144,10 @@ const Config: React.FC<Props> = props => {
     dispatch({
       type: 'noticeConfig/insert',
       payload: item,
-      callback: () => {
-        message.success('导入成功');
+      callback: (data) => {
+        if(data.status===200){
+          message.success('导入成功');
+        }
         handlerSearch(searchParam);
       },
     });
@@ -186,7 +189,7 @@ const Config: React.FC<Props> = props => {
             <StandardFormRow title="组件类型" block style={{ paddingBottom: 11 }}>
               <Form.Item>
                 <TagSelect
-                  expandable
+                  // expandable
                   onChange={(value: any[]) => {
                     setFilterType(value);
                     onSearch(value, undefined);
@@ -244,6 +247,10 @@ const Config: React.FC<Props> = props => {
             </Button>
           </Upload>*/}
           <Upload
+          action="/jetlinks/file/static"
+          headers={{
+            'X-Access-Token': getAccessToken(),
+          }}
             showUploadList={false} accept='.json'
             beforeUpload={(file) => {
               const reader = new FileReader();

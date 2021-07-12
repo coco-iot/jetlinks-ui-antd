@@ -1,19 +1,20 @@
-import {PageHeaderWrapper} from '@ant-design/pro-layout';
-import React, {Fragment, useEffect, useState} from 'react';
-import {Button, Card, Col, Divider, Form, Icon, Input, message, Popconfirm, Row, Table} from 'antd';
+import { PageHeaderWrapper } from '@ant-design/pro-layout';
+import React, { Fragment, useEffect, useState } from 'react';
+import { Button, Card, Col, Divider, Form, Icon, Input, message, Popconfirm, Row, Table } from 'antd';
 import apis from '@/services';
-import {ConnectState, Dispatch} from '@/models/connect';
-import {connect} from 'dva';
-import {FormComponentProps} from 'antd/es/form';
+import { ConnectState, Dispatch } from '@/models/connect';
+import { connect } from 'dva';
+import { FormComponentProps } from 'antd/es/form';
 import encodeQueryParam from '@/utils/encodeParam';
-import {downloadObject} from '@/utils/utils';
-import {PaginationConfig} from 'antd/lib/table';
+import { downloadObject } from '@/utils/utils';
+import { PaginationConfig } from 'antd/lib/table';
 import Save from './save';
 import StandardFormRow from '../components/standard-form-row';
 import TagSelect from '../components/tag-select';
 import styles from '../index.less';
 import Debug from './debugger';
 import Upload from 'antd/lib/upload';
+import { getAccessToken } from '@/utils/authority';
 
 interface Props extends FormComponentProps {
   dispatch: Dispatch;
@@ -34,13 +35,13 @@ interface State {
 
 const formItemLayout = {
   wrapperCol: {
-    xs: {span: 24},
-    sm: {span: 16},
+    xs: { span: 24 },
+    sm: { span: 16 },
   },
 };
 
 const Template: React.FC<Props> = props => {
-  const {noticeTemplate, loading, dispatch} = props;
+  const { noticeTemplate, loading, dispatch } = props;
 
   const initState: State = {
     typeList: [],
@@ -110,9 +111,11 @@ const Template: React.FC<Props> = props => {
     dispatch({
       type: 'noticeTemplate/remove',
       payload: record.id,
-      callback: () => {
-        message.success('删除成功');
-        handlerSearch(searchParam);
+      callback: (res) => {
+        if (res.status === 200) {
+          message.success('删除成功');
+          handlerSearch(searchParam);
+        }
       },
     });
   };
@@ -121,10 +124,12 @@ const Template: React.FC<Props> = props => {
     dispatch({
       type: 'noticeTemplate/insert',
       payload: item,
-      callback: () => {
-        message.success('保存成功');
-        setSaveVisible(false);
-        handlerSearch(searchParam);
+      callback: (res) => {
+        if (res.status === 200) {
+          message.success('保存成功');
+          setSaveVisible(false);
+          handlerSearch(searchParam);
+        }
       },
     });
   };
@@ -147,9 +152,11 @@ const Template: React.FC<Props> = props => {
     dispatch({
       type: 'noticeTemplate/insert',
       payload: item,
-      callback: () => {
-        message.success('导入成功');
-        handlerSearch(searchParam);
+      callback: (res) => {
+        if (res.status === 200) {
+          message.success('导入成功');
+          handlerSearch(searchParam);
+        }
       },
     });
   };
@@ -189,16 +196,16 @@ const Template: React.FC<Props> = props => {
       <div className={styles.filterCardList}>
         <Card bordered={false}>
           <Form layout="inline">
-            <StandardFormRow title="组件类型" block style={{paddingBottom: 11}}>
+            <StandardFormRow title="组件类型" block style={{ paddingBottom: 11 }}>
               <Form.Item>
                 <TagSelect
-                  expandable
+                  // expandable
                   onChange={(value: any[]) => {
                     setFilterType(value);
                     onSearch(value, undefined);
                   }}
                 >
-                  {typeList.map(item => (
+                  {typeList?.map(item => (
                     <TagSelect.Option key={item.id} value={item.id}>
                       {item.name}
                     </TagSelect.Option>
@@ -223,7 +230,7 @@ const Template: React.FC<Props> = props => {
             </StandardFormRow>
           </Form>
         </Card>
-        <br/>
+        <br />
         <Card>
           <Button
             onClick={() => {
@@ -231,26 +238,30 @@ const Template: React.FC<Props> = props => {
               setSaveVisible(true);
             }}
             type="primary"
-            style={{marginBottom: 16}}
+            style={{ marginBottom: 16 }}
           >
             新建
           </Button>
-          <Divider type="vertical"/>
+          <Divider type="vertical" />
           <Button
             onClick={() => {
               downloadObject(noticeTemplate.result?.data, '通知模板');
             }}
-            style={{marginBottom: 16}}
+            style={{ marginBottom: 16 }}
           >
             导出配置
           </Button>
-          <Divider type="vertical"/>
+          <Divider type="vertical" />
           {/*<Upload {...uploadProps}>
             <Button type="primary" style={{ marginBottom: 16 }}>
               导入配置
             </Button>
           </Upload>*/}
           <Upload
+          action="/jetlinks/file/static"
+          headers={{
+            'X-Access-Token': getAccessToken(),
+          }}
             showUploadList={false} accept='.json'
             beforeUpload={(file) => {
               const reader = new FileReader();
@@ -265,7 +276,7 @@ const Template: React.FC<Props> = props => {
             }}
           >
             <Button>
-              <Icon type="upload"/>导入配置
+              <Icon type="upload" />导入配置
             </Button>
           </Upload>
 
@@ -305,7 +316,7 @@ const Template: React.FC<Props> = props => {
                     >
                       编辑
                     </a>
-                    <Divider type="vertical"/>
+                    <Divider type="vertical" />
                     <Popconfirm
                       title="确认删除？"
                       onConfirm={() => {
@@ -314,9 +325,9 @@ const Template: React.FC<Props> = props => {
                     >
                       <a>删除</a>
                     </Popconfirm>
-                    <Divider type="vertical"/>
+                    <Divider type="vertical" />
                     <a onClick={() => downloadObject(record, '通知模版')}>下载配置</a>
-                    <Divider type="vertical"/>
+                    <Divider type="vertical" />
                     <a
                       onClick={() => {
                         setCurrentItem(record);
@@ -353,12 +364,12 @@ const Template: React.FC<Props> = props => {
           save={(item: any) => saveData(item)}
         />
       )}
-      {debugVisible && <Debug data={currentItem} close={() => setDebugVisible(false)}/>}
+      {debugVisible && <Debug data={currentItem} close={() => setDebugVisible(false)} />}
     </PageHeaderWrapper>
   );
 };
 
-export default connect(({noticeTemplate, loading}: ConnectState) => ({
+export default connect(({ noticeTemplate, loading }: ConnectState) => ({
   noticeTemplate,
   loading: loading.models.noticeTemplate,
 }))(Form.create<Props>()(Template));

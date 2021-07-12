@@ -89,7 +89,30 @@ const RuleInstanceList: React.FC<Props> = props => {
   }, []);
 
   const startInstance = (record: any) => {
-    apis.ruleInstance
+    if(record.modelType === "device_alarm"){
+      apis.ruleInstance
+      .startDeviceAlarm(record.id)
+      .then(response => {
+        if (response.status === 200) {
+          message.success('启动成功');
+          handleSearch(searchParam);
+        }
+      })
+      .catch(() => {
+      });
+    }else if(record.modelType === "rule-scene"){
+      apis.ruleInstance
+      .startScene(record.id)
+      .then(response => {
+        if (response.status === 200) {
+          message.success('启动成功');
+          handleSearch(searchParam);
+        }
+      })
+      .catch(() => {
+      });
+    }else{
+      apis.ruleInstance
       .start(record.id)
       .then(response => {
         if (response.status === 200) {
@@ -99,10 +122,34 @@ const RuleInstanceList: React.FC<Props> = props => {
       })
       .catch(() => {
       });
+    }
   };
 
   const stopInstance = (record: any) => {
-    apis.ruleInstance
+    if(record.modelType === "device_alarm"){
+      apis.ruleInstance
+      .stopDeviceAlarm(record.id)
+      .then(response => {
+        if (response.status === 200) {
+          message.success('停止成功');
+          handleSearch(searchParam);
+        }
+      })
+      .catch(() => {
+      });
+    }else if(record.modelType === "rule-scene"){
+      apis.ruleInstance
+      .stopScene(record.id)
+      .then(response => {
+        if (response.status === 200) {
+          message.success('停止成功');
+          handleSearch(searchParam);
+        }
+      })
+      .catch(() => {
+      });
+    }else{
+      apis.ruleInstance
       .stop(record.id)
       .then(response => {
         if (response.status === 200) {
@@ -112,6 +159,7 @@ const RuleInstanceList: React.FC<Props> = props => {
       })
       .catch(() => {
       });
+    }
   };
 
   const handleDelete = (params: any) => {
@@ -294,7 +342,7 @@ const RuleInstanceList: React.FC<Props> = props => {
               pageSize: result?.pageSize,
               showQuickJumper: true,
               showSizeChanger: true,
-              hideOnSinglePage: true,
+              // hideOnSinglePage: true,
               pageSizeOptions: ['8', '16', '40', '80'],
               style: { marginTop: -20 },
               showTotal: (total: number) =>
